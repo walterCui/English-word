@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>单词卡 · KET/PET 词汇</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg1:#667eea;--bg2:#764ba2;--bg3:#f093fb;
+  --card:#fff;--text:#2d3748;--muted:#718096;
+  --green:#48bb78;--yellow:#ecc94b;--red:#fc8181;
+  --shadow:0 10px 40px rgba(0,0,0,.12);
+  --radius:20px;
+  --font-en:'Nunito',system-ui,sans-serif;
+}
+html{font-size:16px}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  min-height:100dvh;
+  background:linear-gradient(135deg,var(--bg1) 0%,var(--bg2) 50%,var(--bg3) 100%);
+  background-attachment:fixed;
+  color:var(--text);
+  overflow-x:hidden;
+}
+.app{max-width:520px;margin:0 auto;padding:12px 16px 24px;min-height:100dvh;display:flex;flex-direction:column}
+
+/* Header */
+.header{text-align:center;padding:8px 0 12px;color:#fff}
+.header h1{font-size:1.35rem;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,.15);letter-spacing:.5px}
+.header p{font-size:.8rem;opacity:.85;margin-top:4px}
+
+/* Search */
+.search-wrap{position:relative;margin-bottom:10px}
+.search-wrap input{
+  width:100%;padding:10px 16px 10px 40px;border:none;border-radius:50px;
+  font-size:.95rem;background:rgba(255,255,255,.92);box-shadow:0 4px 15px rgba(0,0,0,.08);
+  outline:none;transition:box-shadow .3s,transform .2s;
+}
+.search-wrap input:focus{box-shadow:0 6px 20px rgba(0,0,0,.15);transform:scale(1.01)}
+.search-wrap .icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:1rem;opacity:.5}
+
+/* Category tabs */
+.tabs{
+  display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex-shrink:0;padding:6px 14px;border:none;border-radius:50px;
+  font-size:.78rem;font-weight:600;cursor:pointer;white-space:nowrap;
+  background:rgba(255,255,255,.25);color:rgba(255,255,255,.75);
+  transition:all .3s ease;backdrop-filter:blur(4px);
+}
+.tab:hover{background:rgba(255,255,255,.4);transform:scale(1.05)}
+.tab.active{background:#fff;color:var(--bg2);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+
+/* Status filter */
+.status-filter{display:flex;gap:6px;margin-bottom:12px;justify-content:center}
+.status-filter .tab{font-size:.75rem;padding:5px 12px}
+
+/* Card area */
+.card-area{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  perspective:1200px;min-height:340px;position:relative;
+}
+.card-viewport{width:100%;position:relative;overflow:hidden}
+.card-slide{
+  width:100%;transition:transform .35s ease,opacity .35s ease;
+}
+.card-slide.slide-out-left{transform:translateX(-120%);opacity:0}
+.card-slide.slide-out-right{transform:translateX(120%);opacity:0}
+.card-slide.slide-in-left{animation:slideInLeft .35s ease}
+.card-slide.slide-in-right{animation:slideInRight .35s ease}
+@keyframes slideInLeft{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideInRight{from{transform:translateX(-120%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+.card-scene{width:100%;cursor:pointer}
+.card-inner{
+  position:relative;width:100%;min-height:320px;
+  transition:transform .6s cubic-bezier(.4,.2,.2,1);
+  transform-style:preserve-3d;
+}
+.card-inner.flipped{transform:rotateY(180deg)}
+.card-face{
+  position:absolute;width:100%;min-height:320px;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:24px 20px;display:flex;flex-direction:column;
+  animation:cardEnter .6s cubic-bezier(.34,1.56,.64,1);
+}
+.card-face.back{transform:rotateY(180deg);overflow-y:auto;max-height:420px}
+@keyframes cardEnter{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.card-num{font-size:.85rem;color:var(--muted);font-weight:600}
+.status-dot{width:12px;height:12px;border-radius:50%;display:none}
+.status-dot.show{display:block}
+.status-dot.mastered{background:var(--green);box-shadow:0 0 6px var(--green)}
+.status-dot.review{background:var(--yellow);box-shadow:0 0 6px var(--yellow)}
+.status-dot.unknown{background:var(--red);box-shadow:0 0 6px var(--red)}
+
+.card-front-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:12px 0}
+.word{font-family:var(--font-en);font-size:2.4rem;font-weight:800;color:var(--bg2);line-height:1.2;margin-bottom:8px}
+.phonetic{font-family:var(--font-en);font-size:.9rem;color:var(--muted);margin-bottom:6px;line-height:1.5}
+.pos{font-family:var(--font-en);font-size:1rem;color:#a0aec0;font-weight:600;margin-bottom:12px}
+.meaning{font-size:1.35rem;font-weight:600;color:var(--text)}
+.flip-hint{font-size:.75rem;color:#cbd5e0;margin-top:20px}
+
+/* Speak button */
+.speak-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:30px;height:30px;border:none;border-radius:50%;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2));color:#fff;
+  font-size:.85rem;cursor:pointer;margin-left:6px;vertical-align:middle;
+  box-shadow:0 3px 10px rgba(102,126,234,.35);
+  transition:all .25s ease;
+}
+.speak-btn:hover{transform:scale(1.12);box-shadow:0 5px 16px rgba(102,126,234,.5)}
+.speak-btn:active{transform:scale(.95)}
+.speak-btn.speaking{animation:pulse-speak .8s ease infinite}
+@keyframes pulse-speak{0%,100%{transform:scale(1);box-shadow:0 3px 10px rgba(102,126,234,.35)}50%{transform:scale(1.15);box-shadow:0 5px 20px rgba(102,126,234,.55)}}
+
+.card-back-title{font-family:var(--font-en);font-size:1.1rem;font-weight:700;color:var(--bg2);margin-bottom:8px}
+.divider{height:1px;background:linear-gradient(90deg,transparent,#e2e8f0,transparent);margin:8px 0 12px}
+.section-title{font-size:.85rem;font-weight:700;margin-bottom:6px;color:var(--text)}
+.section-text{font-size:.82rem;line-height:1.6;color:#4a5568;margin-bottom:14px}
+.exam-box{
+  background:linear-gradient(135deg,#f7fafc,#edf2f7);border-radius:12px;
+  padding:12px 14px;font-size:.8rem;line-height:1.7;color:#4a5568;
+}
+.exam-box .row{margin-bottom:4px}
+.exam-box .label{font-weight:700;color:var(--bg2)}
+
+/* Empty state */
+.empty-state{
+  text-align:center;padding:40px 20px;background:rgba(255,255,255,.9);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+}
+.empty-state p{font-size:1rem;color:var(--muted);margin-bottom:12px}
+
+/* Error state */
+.error-state{
+  text-align:center;padding:40px 20px;background:rgba(255,255,255,.95);
+  border-radius:var(--radius);box-shadow:var(--shadow);max-width:400px;margin:0 auto;
+}
+.error-state h2{color:#e53e3e;font-size:1.1rem;margin-bottom:12px}
+.error-state p{font-size:.85rem;color:var(--muted);margin-bottom:8px;line-height:1.6}
+.error-state code{background:#edf2f7;padding:2px 8px;border-radius:4px;font-size:.8rem}
+
+/* Bottom nav */
+.bottom-nav{margin-top:auto;padding-top:12px}
+.nav-row{display:flex;justify-content:center;gap:10px;margin-bottom:10px}
+.nav-btn{
+  padding:10px 20px;border:none;border-radius:50px;font-size:.9rem;font-weight:700;
+  cursor:pointer;transition:all .25s ease;background:#fff;color:var(--bg2);
+  box-shadow:0 4px 12px rgba(0,0,0,.1);
+}
+.nav-btn:hover{transform:scale(1.06);box-shadow:0 6px 18px rgba(0,0,0,.15)}
+.nav-btn:active{transform:scale(.96)}
+.nav-btn.shuffle{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+.nav-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+.progress-wrap{margin-bottom:12px}
+.progress-bar-bg{
+  height:6px;background:rgba(255,255,255,.3);border-radius:3px;overflow:hidden;margin-bottom:6px;
+}
+.progress-bar-fill{
+  height:100%;border-radius:3px;
+  background:linear-gradient(90deg,#fff,#f093fb);
+  transition:width .4s ease;
+}
+.progress-text{text-align:center;font-size:.85rem;color:#fff;font-weight:600}
+
+.mark-row{display:flex;justify-content:center;gap:8px}
+.mark-btn{
+  flex:1;max-width:120px;padding:10px 8px;border:none;border-radius:14px;
+  font-size:.82rem;font-weight:700;cursor:pointer;transition:all .25s ease;
+  color:#fff;box-shadow:0 4px 10px rgba(0,0,0,.12);
+}
+.mark-btn:hover{transform:scale(1.05);box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.mark-btn:active{animation:bounce .4s ease}
+@keyframes bounce{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.mark-btn.mastered{background:var(--green)}
+.mark-btn.review{background:var(--yellow);color:#744210}
+.mark-btn.unknown{background:var(--red)}
+
+/* Shuffle animation */
+.shuffling .card-inner{animation:shuffle .5s ease}
+@keyframes shuffle{0%,100%{transform:rotateY(0) scale(1)}25%{transform:rotateY(90deg) scale(.9)}50%{transform:rotateY(180deg) scale(.85)}75%{transform:rotateY(270deg) scale(.9)}}
+
+/* Responsive */
+@media(max-width:380px){
+  .word{font-size:2rem}
+  .meaning{font-size:1.15rem}
+  .nav-btn{padding:8px 14px;font-size:.82rem}
+  .mark-btn{font-size:.75rem;padding:8px 6px}
+}
+@media(min-width:521px){
+  .app{max-width:560px}
+  .card-face{min-height:360px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <h1 id="appTitle">📚 单词卡</h1>
+    <p>KET / PET 核心词汇 · 点击卡片翻转查看详情</p>
+  </header>
+
+  <div class="search-wrap">
+    <span class="icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="搜索中文或英文单词..." autocomplete="off">
+  </div>
+
+  <div class="tabs" id="categoryTabs"></div>
+
+  <div class="status-filter" id="statusFilter">
+    <button class="tab active" data-status="all">全部状态</button>
+    <button class="tab" data-status="review">⚠ 需复习</button>
+    <button class="tab" data-status="unknown">✗ 不会</button>
+    <button class="tab" data-status="mastered">✓ 已掌握</button>
+  </div>
+
+  <div class="card-area" id="cardArea">
+    <div class="card-viewport" id="cardViewport">
+      <div class="card-slide" id="cardSlide"></div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-row">
+      <button class="nav-btn" id="prevBtn">← 上一个</button>
+      <button class="nav-btn shuffle" id="shuffleBtn">🔀 随机</button>
+      <button class="nav-btn" id="nextBtn">下一个 →</button>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">0/0</div>
+    </div>
+    <div class="mark-row">
+      <button class="mark-btn mastered" data-mark="mastered">✓ 已掌握</button>
+      <button class="mark-btn review" data-mark="review">⚠ 需复习</button>
+      <button class="mark-btn unknown" data-mark="unknown">✗ 不会</button>
+    </div>
+  </div>
+</div>
+
+<!-- manifest 会自动注入各数据文件的 script 标签 -->
+<script src="vocab-manifest.js"></script>
+
+<script>
+(function() {
+
+const VOCAB_DATA = (window._vocabChunks || []).flat();
+
+if (VOCAB_DATA.length === 0) {
+  document.getElementById('cardSlide').innerHTML = `
+    <div class="error-state">
+      <h2>⚠️ 未找到单词数据</h2>
+      <p>请确保 <code>vocab-manifest.js</code> 和数据文件在同一文件夹下。</p>
+    </div>`;
+  return;
+}
+
+const totalWords = VOCAB_DATA.length;
+document.getElementById('appTitle').textContent = `📚 ${totalWords} 单词卡`;
+
+// --- 从数据动态生成分类 ---
+function buildCategories(data) {
+  const catMap = new Map();
+  data.forEach(w => {
+    const cat = w['分类'] || '未分类';
+    if (!catMap.has(cat)) catMap.set(cat, []);
+    catMap.get(cat).push(w['序号']);
+  });
+  const cats = [{ id: 'all', label: `全部(${data.length})`, filter: null }];
+  catMap.forEach((ids, name) => {
+    const lo = Math.min(...ids), hi = Math.max(...ids);
+    cats.push({
+      id: name,
+      label: `${name}(${ids.length})`,
+      filter: name
+    });
+  });
+  return cats;
+}
+
+const CATEGORIES = buildCategories(VOCAB_DATA);
+
+const STORAGE_KEY = 'vocab-marks-' + totalWords;
+
+let marks = {};
+try { marks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { marks = {}; }
+
+let currentCategory = 'all';
+let currentStatusFilter = 'all';
+let searchQuery = '';
+let filteredList = [];
+let currentIndex = 0;
+let isFlipped = false;
+let isAnimating = false;
+let touchStartX = 0;
+let touchStartY = 0;
+
+function saveMarks() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(marks));
+}
+
+function buildFilteredList() {
+  let list = [...VOCAB_DATA];
+  if (currentCategory !== 'all') {
+    const cat = CATEGORIES.find(c => c.id === currentCategory);
+    if (cat && cat.filter) {
+      list = list.filter(w => (w['分类'] || '未分类') === cat.filter);
+    }
+  }
+  if (currentStatusFilter !== 'all') {
+    list = list.filter(w => marks[w['序号']] === currentStatusFilter);
+  }
+  if (searchQuery.trim()) {
+    const q = searchQuery.trim().toLowerCase();
+    list = list.filter(w =>
+      w['单词'].toLowerCase().includes(q) ||
+      w['中文'].includes(q) ||
+      (w['音标'] || '').toLowerCase().includes(q)
+    );
+  }
+  return list;
+}
+
+function refreshList(keepWord) {
+  const prevWord = filteredList[currentIndex];
+  filteredList = buildFilteredList();
+  if (keepWord && prevWord) {
+    const idx = filteredList.findIndex(w => w['序号'] === prevWord['序号']);
+    currentIndex = idx >= 0 ? idx : 0;
+  } else {
+    currentIndex = 0;
+  }
+  if (currentIndex >= filteredList.length) currentIndex = Math.max(0, filteredList.length - 1);
+  isFlipped = false;
+  renderCard(false);
+  updateProgress();
+  updateNavButtons();
+}
+
+function renderCategoryTabs() {
+  const container = document.getElementById('categoryTabs');
+  container.innerHTML = CATEGORIES.map(cat =>
+    `<button class="tab${cat.id === currentCategory ? ' active' : ''}" data-cat="${cat.id}">${cat.label}</button>`
+  ).join('');
+  container.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentCategory = btn.dataset.cat;
+      container.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      refreshList(false);
+    });
+  });
+}
+
+function renderStatusFilter() {
+  document.querySelectorAll('#statusFilter .tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentStatusFilter = btn.dataset.status;
+      document.querySelectorAll('#statusFilter .tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      refreshList(false);
+    });
+  });
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function renderCard(animate) {
+  const slide = document.getElementById('cardSlide');
+  if (filteredList.length === 0) {
+    slide.innerHTML = `<div class="empty-state"><p>😅 没有找到匹配的单词</p><p style="font-size:.85rem">试试换个分类或搜索词</p></div>`;
+    return;
+  }
+  const word = filteredList[currentIndex];
+  const mark = marks[word['序号']] || '';
+  const dotClass = mark ? `show ${mark}` : '';
+  const level = word['级别'] || 'KET 核心词汇';
+  const numDisplay = `${word['序号']}/${totalWords}`;
+
+  const frontHtml = `
+    <div class="card-scene" id="cardScene">
+      <div class="card-inner" id="cardInner">
+        <div class="card-face front">
+          <div class="card-top">
+            <div class="status-dot ${dotClass}" id="statusDot"></div>
+            <div class="card-num">${numDisplay}</div>
+          </div>
+          <div class="card-front-body">
+            <div class="word">${escHtml(word['单词'])}</div>
+            <div class="phonetic">
+              ${escHtml(word['音标'])}
+              <button class="speak-btn" id="speakBtnUK" title="英式发音" onclick="event.stopPropagation()">🇬🇧</button>
+              <button class="speak-btn" id="speakBtnUS" title="美式发音" onclick="event.stopPropagation()">🇺🇸</button>
+            </div>
+            <div class="pos">${escHtml(word['词性'])}</div>
+            <div class="meaning">${escHtml(word['中文'])}</div>
+            <div class="flip-hint">点击翻转查看详情</div>
+          </div>
+        </div>
+        <div class="card-face back">
+          <div class="card-top">
+            <div class="status-dot ${dotClass}"></div>
+            <div class="card-num">${numDisplay}</div>
+          </div>
+          <div class="card-back-title">${escHtml(word['单词'])}</div>
+          <div class="divider"></div>
+          <div class="section-title">💡 记忆技巧</div>
+          <div class="section-text">${escHtml(word['词源/记忆技巧'])}</div>
+          <div class="section-title">📝 ${escHtml(level)}</div>
+          <div class="exam-box">
+            <div class="row"><span class="label">常考题型：</span>${escHtml(word['常考题型'])}</div>
+            <div class="row"><span class="label">常见搭配：</span>${escHtml(word['常见搭配'])}</div>
+            <div class="row"><span class="label">易混淆：</span>${escHtml(word['易混淆'])}</div>
+            <div class="row"><span class="label">例句：</span>${escHtml(word['例句'])}</div>
+            <div class="row"><span class="label">真题考法：</span>${escHtml(word['真题考法'])}</div>
+          </div>
+          <div class="flip-hint">点击翻转回正面</div>
+        </div>
+      </div>
+    </div>`;
+
+  slide.innerHTML = frontHtml;
+
+  document.getElementById('cardScene').addEventListener('click', () => {
+    isFlipped = !isFlipped;
+    document.getElementById('cardInner').classList.toggle('flipped', isFlipped);
+  });
+
+  const speakUK = document.getElementById('speakBtnUK');
+  const speakUS = document.getElementById('speakBtnUS');
+  if (speakUK) speakUK.addEventListener('click', () => speakWord(word['单词'], 'uk'));
+  if (speakUS) speakUS.addEventListener('click', () => speakWord(word['单词'], 'us'));
+
+  if (animate) {
+    slide.classList.remove('slide-in-left', 'slide-in-right');
+    void slide.offsetWidth;
+    slide.classList.add(animate === 'left' ? 'slide-in-left' : 'slide-in-right');
+  }
+}
+
+function updateProgress() {
+  const total = filteredList.length;
+  const current = total > 0 ? currentIndex + 1 : 0;
+  const pct = total > 0 ? (current / total) * 100 : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = total > 0 ? `${current}/${total}` : '0/0';
+}
+
+function updateNavButtons() {
+  document.getElementById('prevBtn').disabled = filteredList.length === 0 || currentIndex === 0;
+  document.getElementById('nextBtn').disabled = filteredList.length === 0 || currentIndex >= filteredList.length - 1;
+}
+
+function navigate(direction) {
+  if (isAnimating || filteredList.length === 0) return;
+  if (direction === 'prev' && currentIndex > 0) {
+    isAnimating = true;
+    isFlipped = false;
+    const slide = document.getElementById('cardSlide');
+    slide.classList.add('slide-out-right');
+    setTimeout(() => {
+      currentIndex--;
+      renderCard('left');
+      slide.classList.remove('slide-out-right');
+      isAnimating = false;
+      updateProgress();
+      updateNavButtons();
+    }, 300);
+  } else if (direction === 'next' && currentIndex < filteredList.length - 1) {
+    isAnimating = true;
+    isFlipped = false;
+    const slide = document.getElementById('cardSlide');
+    slide.classList.add('slide-out-left');
+    setTimeout(() => {
+      currentIndex++;
+      renderCard('right');
+      slide.classList.remove('slide-out-left');
+      isAnimating = false;
+      updateProgress();
+      updateNavButtons();
+    }, 300);
+  }
+}
+
+function shuffleCards() {
+  if (filteredList.length <= 1) return;
+  const scene = document.querySelector('.card-scene');
+  if (scene) {
+    scene.classList.add('shuffling');
+    setTimeout(() => scene.classList.remove('shuffling'), 500);
+  }
+  for (let i = filteredList.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [filteredList[i], filteredList[j]] = [filteredList[j], filteredList[i]];
+  }
+  currentIndex = 0;
+  isFlipped = false;
+  renderCard(false);
+  updateProgress();
+  updateNavButtons();
+}
+
+function setMark(status) {
+  if (filteredList.length === 0) return;
+  const word = filteredList[currentIndex];
+  marks[word['序号']] = status;
+  saveMarks();
+  document.querySelectorAll('.status-dot').forEach(dot => {
+    dot.className = 'status-dot show ' + status;
+  });
+}
+
+// --- Speech (真人发音) ---
+let _audioEl = null;
+const _audioCache = {};
+
+function speakWord(text, accent) {
+  accent = accent || 'uk';
+  const btnId = accent === 'us' ? 'speakBtnUS' : 'speakBtnUK';
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+
+  if (_audioEl) {
+    _audioEl.pause();
+    _audioEl.currentTime = 0;
+  }
+
+  document.querySelectorAll('.speak-btn').forEach(b => b.classList.remove('speaking'));
+  btn.classList.add('speaking');
+  const done = () => btn.classList.remove('speaking');
+
+  const cacheKey = text + '_' + accent;
+  const word = encodeURIComponent(text.trim().toLowerCase());
+  // 有道词典: type=1 英音, type=0 美音
+  const youdaoType = accent === 'us' ? 0 : 1;
+  const youdaoUrl = `https://dict.youdao.com/dictvoice?type=${youdaoType}&audio=${word}`;
+
+  if (_audioCache[cacheKey]) {
+    _playAudio(_audioCache[cacheKey], done);
+    return;
+  }
+
+  _playAudio(youdaoUrl, done, () => {
+    fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        const phonetics = data[0]?.phonetics || [];
+        const target = accent === 'us' ? '_us_' : '_gb_';
+        let audioEntry = phonetics.find(p => p.audio && p.audio.includes(target));
+        if (!audioEntry) audioEntry = phonetics.find(p => p.audio && p.audio.length > 0);
+        if (audioEntry) {
+          let url = audioEntry.audio;
+          if (url.startsWith('//')) url = 'https:' + url;
+          _audioCache[cacheKey] = url;
+          _playAudio(url, done, done);
+        } else {
+          _fallbackTTS(text, done);
+        }
+      })
+      .catch(() => _fallbackTTS(text, done));
+  });
+}
+
+function _playAudio(url, onEnd, onError) {
+  _audioEl = new Audio(url);
+  _audioEl.onended = onEnd;
+  _audioEl.onerror = onError || onEnd;
+  _audioEl.play().catch(() => { if (onError) onError(); else onEnd(); });
+}
+
+function _fallbackTTS(text, onEnd) {
+  if (!window.speechSynthesis) { onEnd(); return; }
+  speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'en-GB';
+  utter.rate = 0.85;
+  utter.onend = onEnd;
+  utter.onerror = onEnd;
+  speechSynthesis.speak(utter);
+}
+
+// --- Event listeners ---
+document.getElementById('prevBtn').addEventListener('click', () => navigate('prev'));
+document.getElementById('nextBtn').addEventListener('click', () => navigate('next'));
+document.getElementById('shuffleBtn').addEventListener('click', shuffleCards);
+
+document.querySelectorAll('.mark-btn').forEach(btn => {
+  btn.addEventListener('click', () => setMark(btn.dataset.mark));
+});
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  searchQuery = e.target.value;
+  refreshList(false);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowLeft') navigate('prev');
+  if (e.key === 'ArrowRight') navigate('next');
+  if (e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault();
+    isFlipped = !isFlipped;
+    const inner = document.getElementById('cardInner');
+    if (inner) inner.classList.toggle('flipped', isFlipped);
+  }
+});
+
+const cardArea = document.getElementById('cardArea');
+cardArea.addEventListener('touchstart', (e) => {
+  touchStartX = e.changedTouches[0].screenX;
+  touchStartY = e.changedTouches[0].screenY;
+}, { passive: true });
+
+cardArea.addEventListener('touchend', (e) => {
+  const dx = e.changedTouches[0].screenX - touchStartX;
+  const dy = e.changedTouches[0].screenY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+    if (dx < 0) navigate('next');
+    else navigate('prev');
+  }
+}, { passive: true });
+
+// --- Init ---
+renderCategoryTabs();
+renderStatusFilter();
+filteredList = buildFilteredList();
+renderCard(false);
+updateProgress();
+updateNavButtons();
+
+})();
+</script>
+</body>
+</html>
